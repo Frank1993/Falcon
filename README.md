@@ -76,4 +76,13 @@ For more details, please see a simple examle in example/ to know how to pass cor
 
 ### distributed training
 
-Pleae see [horovod](https://github.com/horovod/horovod) for how to use it for distributed training, a better suggestion is to write a custom docker file to include the tensorflow/custom-op docker images as base image, and includes other layers in official hovorod images, then start distibuted training using different docker containers.
+Although [horovod](https://github.com/horovod/horovod) is much more efficient for bandwidth limited distributed training, considering the application of large scale sparse Id features, we'd better choose Parameter Server as the training strategy.
+
+### Variable sharding
+Variable sharding refers to splitting a variable into multiple smaller variables. We call these smaller variables shards. Variable sharding may be useful to distribute the network load when accessing these shards. It is also useful to distribute computation and storage of a normal variable across multiple parameter servers.  We can put all feature embeddings on multiple PS, and worker only fetch and push parameters to PS used in a batch. We can split parameters equally on all PS using tf.fixed_size_partitioner when creating Variable. The variable reference returned from tf.Variable becomes a type that serves as the container of the sharded variables. One can access variables attribute of this container for the actual variable components. 
+
+```python
+embedding_table = tf.get_variable(
+                "embedding_table", [num_embeddings, embedding_size], dtype=tf.float32,
+                initializer=AnyVariableInitializer, partitioner=tf.fixed_size_partitioner(ps_count))
+```
